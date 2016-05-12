@@ -46,6 +46,8 @@ List<IR.Method> preparse(String str) {
   // Start position of the current record.
   var start;
 
+  var hasTransformModule;
+  
   // Find all tags in the string.
   for (var match in tagRe.allMatches(str)) {
     final tag = match.group(0);
@@ -61,6 +63,9 @@ List<IR.Method> preparse(String str) {
         if (optId != null) optId = optId.substring(1);
         method = new IR.Method(name_parser.parse(name),
                                optimizationId: optId);
+        if (method.name.full == "transformModule") {
+          hasTransformModule = true;
+        }
         methods.add(method);
       });
     } else if (tag == "end_cfg\n") {

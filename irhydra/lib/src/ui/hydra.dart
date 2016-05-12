@@ -8,8 +8,6 @@ import 'dart:typed_data' show ByteBuffer, Uint8List;
 import 'package:ui_utils/html_utils.dart' show toHtml;
 import 'package:ui_utils/xref.dart' show XRef, POPOVER;
 import "package:irhydra/src/modes/perf.dart" as perf;
-import "package:irhydra/src/modes/dartvm/dartvm.dart" as dartvm;
-import "package:irhydra/src/modes/art/art.dart" as art;
 import "package:irhydra/src/modes/v8/v8.dart" as v8;
 import 'package:irhydra/src/ui/spinner-element.dart';
 import 'package:polymer/polymer.dart';
@@ -17,34 +15,8 @@ import 'package:polymer/polymer.dart';
 import 'package:archive/archive.dart' show BZip2Decoder, TarDecoder;
 
 final MODES = [
-  () => new art.Mode(),  // Must come before V8 mode.
-  () => new v8.Mode(),
-  () => new dartvm.Mode(),
+  () => new v8.Mode()
 ];
-
-_createV8DeoptDemo(type) => [
-  "demos/v8/deopt-${type}/hydrogen.cfg",
-  "demos/v8/deopt-${type}/code.asm"
-];
-
-_createWebRebelsDemo(name) => [
-  "demos/webrebels2014/${name}/data.tar.bz2"
-];
-
-final DEMOS = {
-  "demo-1": _createV8DeoptDemo("eager"),
-  "demo-2": _createV8DeoptDemo("soft"),
-  "demo-3": _createV8DeoptDemo("lazy"),
-  "demo-4": ["demos/dart/code.asm"],
-  "webrebels-2014-concat": _createWebRebelsDemo("1-concat"),
-  "webrebels-2014-concat-fixed": _createWebRebelsDemo("2-concat-fixed"),
-  "webrebels-2014-prototype-node": _createWebRebelsDemo("3-prototype-node"),
-  "webrebels-2014-prototype-node-getter": _createWebRebelsDemo("4-prototype-node-getter"),
-  "webrebels-2014-prototype": _createWebRebelsDemo("5-prototype"),
-  "webrebels-2014-prototype-tostring": _createWebRebelsDemo("6-prototype-tostring"),
-  "webrebels-2014-method-function": _createWebRebelsDemo("7-method-function"),
-  "webrebels-2014-method-function-hack": _createWebRebelsDemo("8-method-function-hack"),
-};
 
 class TextFile {
   final file;
@@ -162,46 +134,16 @@ class HydraElement extends PolymerElement {
   static final GIST_REGEXP = new RegExp(r"^gist:([a-f0-9]+)$");
   static const GIST_ROOT = 'https://gist.githubusercontent.com/raw/';
 
-  _loadDemo(fragment) {
-    if (DEMOS.containsKey(fragment)) {
-      _wait(DEMOS[fragment], _requestArtifact);
-      return true;
-    }
-
-    final driveMatch = DRIVE_REGEXP.firstMatch(fragment);
-    if (driveMatch != null) {
-      _wait(["${DRIVE_ROOT}${driveMatch.group(1)}"], _requestArtifact);
-      return true;
-    }
-
-    // Load artifacts from gist when fragment matches 'gist:gistId'.
-    final gistMatch = GIST_REGEXP.firstMatch(fragment);
-    if (gistMatch != null) {
-      _wait([
-        "${GIST_ROOT}${gistMatch.group(1)}/hydrogen.cfg",
-        "${GIST_ROOT}${gistMatch.group(1)}/code.asm"
-      ], _requestArtifact);
-      return true;
-    }
-
-    return false;
-  }
-
   attached() {
     super.attached();
 
     new async.Timer(const Duration(milliseconds: 50), () {
-      if (!_loadDemo(Uri.parse(window.location.href).fragment)) {
-        window.location.hash = "";
-      }
+      window.location.hash = "";
     });
 
     window.onHashChange.listen((e) {
       final to = Uri.parse(e.newUrl).fragment;
 
-      if (_loadDemo(to)) {
-        return;
-      }
 
       if (to == "source" || to == "ir" || to == "graph") {
         activeTab = to;
