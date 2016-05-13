@@ -2,9 +2,11 @@
   "name": "irhydra",
   "version": "1.0.0",
   "description": "IRHydra is an in-browser tool that can display V8 and Dart VM compilation artifacts (namely intermediate representations and native code) dumped during optimization.",
-  "main": "main.js",
+  "main": "./irhydra/build/web/main.js  ",
   "scripts": {
-    "start": "electron main.js"
+    "start": "electron ./irhydra/build/web/main.js",
+    "build_hydra": "cd irhydra && pub build --mode debug && cd ..",
+    "build_debug": "npm run build_hydra || true && tsc -p . --diagnostics"
   },
   "repository": {
     "type": "git",
@@ -17,6 +19,10 @@
   },
   "homepage": "https://github.com/vladima/irhydra#readme",
   "dependencies": {
-    "electron-prebuilt": "^0.37.8"
+    "electron-prebuilt": "^0.37.8",
+    "event-stream": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "^1.9.0-dev.20160512"
   }
 }

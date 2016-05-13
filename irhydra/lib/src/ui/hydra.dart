@@ -32,8 +32,8 @@ class TextFile {
     // FileReader.readAsBinaryString is not exposed in Dart
     // so we trampoline through JS.
     async.Completer completer = new async.Completer();
-    js.context.callMethod('readAsBinaryString', [
-      file, completer.complete]);
+    js.context.callMethod('load', [
+      file , completer.complete]);
     return completer.future;
   }
 }
