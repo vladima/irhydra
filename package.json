@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron ./irhydra/build/web/main.js",
     "build_hydra": "cd irhydra && pub build --mode debug && cd ..",
-    "build_debug": "npm run build_hydra || true && tsc -p . --diagnostics"
+    "build_tsc": "tsc -p . --diagnostics",
+    "build_debug": "npm run build_hydra && npm run build_tsc"
   },
   "repository": {
     "type": "git",
