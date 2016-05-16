@@ -4,6 +4,8 @@ import HydrogenLog from "./hydrogenLog";
 import * as fs from "fs";
 import * as path from "path";
 
+const log = new HydrogenLog();
+
 // invoked from the dart
 function load(file: {path: string}, cb: (arg: any) => void) {
     if (path.extname(file.path) === ".cfg") {
@@ -16,10 +18,15 @@ function load(file: {path: string}, cb: (arg: any) => void) {
     }
 }
 
+function getText(startLine: number, endLine: number): string {
+    return log.getPhaseBodyText(startLine, endLine);
+}
+
 // pre-parse hydrogen log, return list of method descriptors through the callback
-function loadHydrogenLog(path: string, cb: (methods: LoadHydrogenLog.Method[]) => void) {
-    var log = new HydrogenLog();
-    log.load(path, cb);
+function loadHydrogenLog(path: string, cb: (methods: any) => void) {
+    log.load(path, x => {
+        cb({data: x, text: require("fs").readFileSync(path).toString()})
+    });
     if (1) return;
     ipcRenderer.once(LoadHydrogenLog.ResponseChannel, (e, response: LoadHydrogenLog.Response) => {
         cb(response.methods);
@@ -28,8 +35,9 @@ function loadHydrogenLog(path: string, cb: (methods: LoadHydrogenLog.Method[]) =
     ipcRenderer.send(LoadHydrogenLog.RequestChannel, request )
 }
 
-function loadCode(path: string, cb: (code: string) => void) {
+function loadCode(path: string, cb: (code: any) => void) {
     fs.readFile(path, (err, data) => {
-        cb(data.toString());
+        const text = data.toString();
+        cb({data: text});
     })
 }

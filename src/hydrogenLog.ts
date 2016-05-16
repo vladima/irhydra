@@ -69,10 +69,10 @@ export default class HydrogenLog {
             });
     }
     
-    public getPhaseBodyText(phase: LoadHydrogenLog.Phase): string {
+    public getPhaseBodyText(startLine: number, endLine: number): string {
         let text = "";
-        for (let i = phase.startLine; i < phase.endLine; ++i) {
-            if (i != phase.startLine) {
+        for (let i = startLine; i < endLine; ++i) {
+            if (i != startLine) {
                 text += "\n";
             }
             text += this.lines[i];

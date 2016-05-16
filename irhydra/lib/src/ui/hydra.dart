@@ -9,10 +9,10 @@ import 'package:ui_utils/html_utils.dart' show toHtml;
 import 'package:ui_utils/xref.dart' show XRef, POPOVER;
 import "package:irhydra/src/modes/perf.dart" as perf;
 import "package:irhydra/src/modes/v8/v8.dart" as v8;
+import 'package:irhydra/src/modes/ir.dart' as IR;
 import 'package:irhydra/src/ui/spinner-element.dart';
 import 'package:polymer/polymer.dart';
-
-import 'package:archive/archive.dart' show BZip2Decoder, TarDecoder;
+import 'package:irhydra/src/modes/v8/hydrogen_parser.dart' as hydrogen_parser;
 
 final MODES = [
   () => new v8.Mode()
@@ -47,7 +47,7 @@ timeAndReport(action, report) {
 
 @CustomTag('hydra-app')
 class HydraElement extends PolymerElement {
-  @observable var mode;
+  @observable v8.Mode mode;
   @observable var files;
   @observable var phase;
   @observable var methods;
@@ -79,54 +79,54 @@ class HydraElement extends PolymerElement {
 
   HydraElement.created() : super.created();
 
-  _requestArtifact(path) {
-    done(x) {
-      shadowRoot.querySelector("#progress-toast").dismiss();
-      progressUrl = progressValue = progressAction = null;
-    }
-
-    if (path.endsWith(".tar.bz2")) {
-      unpack(data) {
-        if (data is ByteBuffer) {
-          data = new Uint8List.view(data);
-        }
-
-        final tar = timeAndReport(() => js.context.callMethod('BUNZIP2', [data]),
-            (ms) => "Unpacking ${path} (${data.length} bytes) in JS took ${ms} ms (${data.length / ms} bytes/ms)");
-
-        return new TarDecoder().decodeBytes(tar).files;
-      }
-
-      loadFiles(files) {
-        for (var file in files)
-          loadData(new String.fromCharCodes(file.content));
-      }
-
-      progress(evt) {
-        if (evt.lengthComputable) {
-          progressValue = (evt.loaded * 100 / evt.total).floor();
-        }
-      }
-
-      progressAction = "Downloading";
-      progressUrl = path;
-      shadowRoot.querySelector("#progress-toast").show();
-      return HttpRequest.request(path, responseType: "arraybuffer", onProgress: progress)
-        .then((rq) {
-          progressAction = "Unpacking";
-          shadowRoot.querySelector("#progress-toast").show();
-          return new async.Future.delayed(const Duration(milliseconds: 100), () => rq.response);
-        })
-        .then(unpack)
-        .then(loadFiles)
-        .then(done, onError: done);
-    } else {
-      progressAction = "Downloading";
-      progressUrl = path;
-      shadowRoot.querySelector("#progress-toast").show();
-      return HttpRequest.getString(path).then(loadData).then(done, onError: done);
-    }
-  }
+//  _requestArtifact(path) {
+//    done(x) {
+//      shadowRoot.querySelector("#progress-toast").dismiss();
+//      progressUrl = progressValue = progressAction = null;
+//    }
+//
+//    if (path.endsWith(".tar.bz2")) {
+//      unpack(data) {
+//        if (data is ByteBuffer) {
+//          data = new Uint8List.view(data);
+//        }
+//
+//        final tar = timeAndReport(() => js.context.callMethod('BUNZIP2', [data]),
+//            (ms) => "Unpacking ${path} (${data.length} bytes) in JS took ${ms} ms (${data.length / ms} bytes/ms)");
+//
+//        return new TarDecoder().decodeBytes(tar).files;
+//      }
+//
+//      loadFiles(files) {
+//        for (var file in files)
+//          loadData(new String.fromCharCodes(file.content));
+//      }
+//
+//      progress(evt) {
+//        if (evt.lengthComputable) {
+//          progressValue = (evt.loaded * 100 / evt.total).floor();
+//        }
+//      }
+//
+//      progressAction = "Downloading";
+//      progressUrl = path;
+//      shadowRoot.querySelector("#progress-toast").show();
+//      return HttpRequest.request(path, responseType: "arraybuffer", onProgress: progress)
+//        .then((rq) {
+//          progressAction = "Unpacking";
+//          shadowRoot.querySelector("#progress-toast").show();
+//          return new async.Future.delayed(const Duration(milliseconds: 100), () => rq.response);
+//        })
+//        .then(unpack)
+//        .then(loadFiles)
+//        .then(done, onError: done);
+//    } else {
+//      progressAction = "Downloading";
+//      progressUrl = path;
+//      shadowRoot.querySelector("#progress-toast").show();
+//      return HttpRequest.getString(path).then(loadData).then(done, onError: done);
+//    }
+//  }
 
   static final DRIVE_REGEXP = new RegExp(r"^drive:([_\w.]+)$");
   static const DRIVE_ROOT = 'http://googledrive.com/host/0B6XwArTFTLptOWZfVTlUWkdkMTg/';
@@ -375,29 +375,76 @@ class HydraElement extends PolymerElement {
   }
 
   /** Load data from the given textual artifact if any mode can handle it. */
-  loadData(text) {
+  loadData(o) {
+    var data = o["data"];
+    var text = o["text"];
     // Warn about Windows-style (CRLF) line endings.
     // Don't normalize the input: V8 writes code trace in
     // binary mode (retaining original line endings) so
     // in theory everything should just work.
-    crlfDetected = crlfDetected || text.contains("\r\n");
+    //crlfDetected = crlfDetected || text.contains("\r\n");
+    if (mode == null) {
+      mode = new v8.Mode();
+    }
 
-    if (mode == null || !mode.load(text)) {
-      var newMode;
-      for (var modeFactory in MODES) {
-        final candidate = modeFactory();
-        if (candidate.load(text)) {
-          newMode = candidate;
-          break;
-        }
-      }
-
-      if (newMode == null) {
+    if (data is String) {
+      mode.loadCode(data);
+    }
+    else {
+      var hydrogenLog = convertHydrogenLog(data);
+      var test = hydrogen_parser.preparse(text);
+      if (test.length != hydrogenLog.length) {
         return;
       }
-
-      mode = newMode;
+      for (var i = 0; i < test.length; ++i) {
+        var o1 = test[i];
+        var o2 = hydrogenLog[i];
+        // compare name
+        if (o1.name.full != o2.name.full) {
+          return;
+        }
+        if (o1.name.source != o2.name.source) {
+          return;
+        }
+        if (o1.name.short != o2.name.short) {
+          return;
+        }
+        if (o1.optimizationId != o2.optimizationId) {
+          return;
+        }
+        if (o1.phases.length != o2.phases.length) {
+          return;
+        }
+        for (var j = 0; j < o1.phases.length; ++j) {
+          var ph1 = o1.phases[j];
+          var ph2 = o2.phases[j];
+          if (ph1.name != ph2.name) {
+            return;
+          }
+          if (ph1.ir() !=  ph2.ir()) {
+            return;
+          }
+        }
+      }
+      mode.load(hydrogenLog);
     }
+
+//    if (mode == null || !mode.load(text)) {
+//      var newMode;
+//      for (var modeFactory in MODES) {
+//        final candidate = modeFactory();
+//        if (candidate.load(text)) {
+//          newMode = candidate;
+//          break;
+//        }
+//      }
+//
+//      if (newMode == null) {
+//        return;
+//      }
+//
+//      mode = newMode;
+//    }
 
     timeline = mode.timeline;
 
@@ -407,4 +454,26 @@ class HydraElement extends PolymerElement {
     methods = toObservable(mode.methods);
     closeSplash();
   }
+  List<IR.Method> convertHydrogenLog(List<js.JsObject> objects) {
+    List<IR.Method> methods = [];
+    for(var o in objects) {
+      var name = o["name"];
+      var optId = o["optId"];
+      var phases = o["phases"];
+      var irName = new IR.Name(name["full"], name["source"], name["short"]);
+      var method = new IR.Method(irName, optimizationId: optId);
+      methods.add(method);
+
+      for (var phase in phases) {
+        var name = phase["name"];
+        var startLine = phase["startLine"];
+        var endLine = phase["endLine"];
+        var irPhase = new IR.Phase(method, name, ir: deferredText(startLine, endLine));
+        method.phases.add(irPhase);
+      }
+    }
+    return methods;
+  }
+
+  static deferredText(int startLine, int endLine) => () => js.context.callMethod("getText", [startLine, endLine]);
 }

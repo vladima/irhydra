@@ -51,7 +51,7 @@ abstract class BaseMode {
   var timeline;
 
   /** Parses textual artifact into the list of [IR.Method] */
-  bool load(String text);
+  bool load(o);
 }
 
 class HIRDescriptor extends IRDescriptor {

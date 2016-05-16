@@ -62,21 +62,51 @@ class Mode extends BaseMode {
    * Extract methods from the given artifact (either hydrogen.cfg or
    * an stdout dump)
    */
-  load(text) {
-    if (hydrogen_parser.canRecognize(text) && !hydrogenLoaded) {
-      // This is hydrogen.cfg containing IR.
-      _merge(hydrogen_parser.preparse(text), methods);
-      hydrogenLoaded = true;
-      return true;
-    } else if (code_parser.canRecognize(text) && !codeLoaded) {
-      // This is an stdout dump containing native code and deopts.
-      timeline = [];
-      _merge(methods, code_parser.preparse(text, timeline));
-      codeLoaded = true;
-      return true;
-    } else {
+
+  _loadCode(String text) {
+    if (!code_parser.canRecognize(text) || codeLoaded) {
       return false;
     }
+    // This is an stdout dump containing native code and deopts.
+    timeline = [];
+    _merge(methods, code_parser.preparse(text, timeline));
+    codeLoaded = true;
+  }
+
+  parseAndCompare(String s) {
+    var m = hydrogen_parser.preparse(s);
+  }
+
+  loadCode(String code) {
+    if (!codeLoaded) {
+      return _loadCode(code);
+    }
+    return false;
+  }
+
+
+  load(o) {
+    if (o is String && !codeLoaded) {
+      return loadCode(o);
+    }
+    else if (!hydrogenLoaded) {
+      _merge(o, methods);
+      hydrogenLoaded = true;
+    }
+//    if (hydrogen_parser.canRecognize(text) && !hydrogenLoaded) {
+//      // This is hydrogen.cfg containing IR.
+//      _merge(hydrogen_parser.preparse(text), methods);
+//      hydrogenLoaded = true;
+//      return true;
+//    } else if (code_parser.canRecognize(text) && !codeLoaded) {
+//      // This is an stdout dump containing native code and deopts.
+//      timeline = [];
+//      _merge(methods, code_parser.preparse(text, timeline));
+//      codeLoaded = true;
+//      return true;
+//    } else {
+//      return false;
+//    }
   }
 
   final _lirIdMarker = new RegExp(r"<@(\d+),#\d+>");
