@@ -1,6 +1,6 @@
 import * as electron from "electron";
 import { ipcMain, IpcMainEvent } from "electron";
-import { LoadHydrogenLog } from "./protocol"
+import { LoadHydrogenLog, GetPhaseText } from "./protocol"
 import HydrogenLog from "./hydrogenLog";
 
 // Module to control application life.
@@ -51,9 +51,14 @@ app.on('activate', function () {
 })
 
 const log = new HydrogenLog();
+
 ipcMain.on(LoadHydrogenLog.RequestChannel, (event: IpcMainEvent, arg: LoadHydrogenLog.Request) => {
     log.load(arg.path, methods => {
         const response: LoadHydrogenLog.Response = { methods };
         event.sender.send(LoadHydrogenLog.ResponseChannel, response);
     });
 });
+
+ipcMain.on(GetPhaseText.RequestChannel, (event: IpcMainEvent, arg: GetPhaseText.Request) => {
+    event.returnValue = log.getPhaseBodyText(arg.startLine, arg.endLine);
+})

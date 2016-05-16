@@ -1,10 +1,8 @@
 import { ipcRenderer } from "electron";
-import { LoadHydrogenLog } from "./protocol";
+import { LoadHydrogenLog, GetPhaseText } from "./protocol";
 import HydrogenLog from "./hydrogenLog";
 import * as fs from "fs";
 import * as path from "path";
-
-const log = new HydrogenLog();
 
 // invoked from the dart
 function load(file: {path: string}, cb: (arg: any) => void) {
@@ -18,16 +16,14 @@ function load(file: {path: string}, cb: (arg: any) => void) {
     }
 }
 
+// invoked from the dart
 function getText(startLine: number, endLine: number): string {
-    return log.getPhaseBodyText(startLine, endLine);
+    const request: GetPhaseText.Request = { startLine, endLine };
+    return ipcRenderer.sendSync(GetPhaseText.RequestChannel, request);
 }
 
 // pre-parse hydrogen log, return list of method descriptors through the callback
 function loadHydrogenLog(path: string, cb: (methods: any) => void) {
-    log.load(path, x => {
-        cb({data: x, text: require("fs").readFileSync(path).toString()})
-    });
-    if (1) return;
     ipcRenderer.once(LoadHydrogenLog.ResponseChannel, (e, response: LoadHydrogenLog.Response) => {
         cb(response.methods);
     });
@@ -37,7 +33,6 @@ function loadHydrogenLog(path: string, cb: (methods: any) => void) {
 
 function loadCode(path: string, cb: (code: any) => void) {
     fs.readFile(path, (err, data) => {
-        const text = data.toString();
-        cb({data: text});
-    })
+        cb(data.toString());
+    });
 }
