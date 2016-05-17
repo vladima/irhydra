@@ -5,9 +5,11 @@
   "main": "./irhydra/build/web/main.js  ",
   "scripts": {
     "start": "electron ./irhydra/build/web/main.js",
-    "build_hydra": "cd irhydra && pub build --mode debug && cd ..",
+    "build_hydra_debug": "cd irhydra && pub build --mode debug && cd ..",
+    "build_hydra": "cd irhydra && pub build && cd ..",
     "build_tsc": "tsc -p . --diagnostics",
-    "build_debug": "npm run build_hydra && npm run build_tsc"
+    "build":      "npm run build_hydra_debug && npm run build_tsc",
+    "build_ret": "npm run build_hydra && npm run build_tsc"
   },
   "repository": {
     "type": "git",
