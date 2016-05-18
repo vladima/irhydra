@@ -23,7 +23,7 @@ import "dart:async";
  */
 class DelayedReaction {
   /** Default delay */
-  static const DEFAULT_DELAY = const Duration(milliseconds: 500);
+  static const DEFAULT_DELAY = const Duration(milliseconds: 750);
 
   final delay;
 

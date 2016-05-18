@@ -58,8 +58,7 @@ class MethodList extends PolymerElement {
     delayed.schedule(_recomputeList);
   }
   filterChanged() {
-    delayed.cancel();
-    _recomputeList();
+    delayed.schedule(_recomputeList);
   }
 
 
