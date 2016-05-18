@@ -42,6 +42,7 @@ class GraphPane extends PolymerElement {
   @published var ir;
 
   var _renderTask;
+  var _refresh;
 
   GraphPane.created() : super.created() {
     _renderTask = new Task(render, frozen: true);
@@ -49,7 +50,9 @@ class GraphPane extends PolymerElement {
 
   attached() {
     super.attached();
-    _renderTask.unfreeze();
+    _refresh = (_) => render();
+
+    document.addEventListener("DisplayChanged-graph", _refresh, false);
   }
 
   irChanged() => _renderTask.schedule();
@@ -58,6 +61,11 @@ class GraphPane extends PolymerElement {
 
   showLegend() {
     $["legend"].open();
+  }
+
+  detached() {
+    document.removeEventListener("DisplayChanged-graph", _refresh, false);
+    super.detached();
   }
 
   render() {

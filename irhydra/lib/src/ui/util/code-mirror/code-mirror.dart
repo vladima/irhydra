@@ -68,7 +68,7 @@ class CodeMirrorElement extends PolymerElement {
     _instance.callMethod('setSize', [null, 600]);
     _refresher = (_) => _refresh();
 
-    html.document.addEventListener("DisplayChanged", _refresher, false);
+    html.document.addEventListener("DisplayChanged-source", _refresher, false);
     renderTask.unfreeze();
   }
 
@@ -128,7 +128,7 @@ class CodeMirrorElement extends PolymerElement {
 
   detached() {
     _instance = null;
-    html.document.removeEventListener("DisplayChanged", _refresher, false);
+    html.document.removeEventListener("DisplayChanged-source", _refresher, false);
     super.detached();
   }
 }
